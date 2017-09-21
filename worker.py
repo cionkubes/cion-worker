@@ -8,14 +8,15 @@ from logzero import logger
 from cion_interface.service import service
 from workq.worker import Orchestrator
 
-CERTS = os.path.join(os.path.expanduser('~'), '.docker', 'machine', 'machines', 'manager')
-tls_config = docker.tls.TLSConfig(
-    client_cert=(os.path.join(CERTS, 'cert.pem'), os.path.join(CERTS,'key.pem')),
-    ca_cert=os.path.join(CERTS, 'ca.pem'),
-    verify=True
-)
+# CERTS = os.path.join(os.path.expanduser('~'), '.docker', 'machine', 'machines', 'manager')
+# tls_config = docker.tls.TLSConfig(
+#     client_cert=(os.path.join(CERTS, 'cert.pem'), os.path.join(CERTS, 'key.pem')),
+#     ca_cert=os.path.join(CERTS, 'ca.pem'),
+#     verify=True
+# )
 
-client = docker.DockerClient(base_url='tcp://192.168.99.100:2376', tls=tls_config)
+# client = docker.DockerClient(base_url='tcp://192.168.99.100:2376', tls=tls_config)
+client = docker.from_env()
 
 
 @service.update.implement
@@ -29,7 +30,10 @@ async def update(svc_name, image):
 
 
 def main():
-    addr, port = os.environ['ORCHESTRATOR_ADDRESS'].split(':')
+    address = os.environ['ORCHESTRATOR_ADDRESS']
+
+    logger.info(f"Address: {address}")
+    addr, port = address.split(':')
 
     loop = asyncio.get_event_loop()
 
