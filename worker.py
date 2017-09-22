@@ -26,6 +26,7 @@ async def update(svc_name, image):
     ret = svc.update(image=image, name=svc_name)
     end = time.perf_counter()
     logger.info(f"Update took {end - start} seconds.")
+    await asyncio.sleep(10)
     return ret
 
 
