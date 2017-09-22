@@ -1,6 +1,6 @@
 import asyncio
 import os
-import time
+from concurrent.futures import thread
 
 import docker
 from logzero import logger
@@ -17,20 +17,21 @@ from workq.worker import Orchestrator
 
 # client = docker.DockerClient(base_url='tcp://192.168.99.100:2376', tls=tls_config)
 client = docker.from_env()
+client.login(username='haraldfw', password='6Ci!*5Xai!sWRNA')
 
 
 @service.update.implement
-async def update(svc_name, image):
-    start = time.perf_counter()
+async def update(svc_name, image: str):
+    repo, tag = image.split(':')
+    pull = client.images.pull(repo, tag=tag)
+    logger.info(f'Image pulled: {pull.id}')
     svc = client.services.get(svc_name)
-    ret = svc.update(image=image, name=svc_name)
-    end = time.perf_counter()
-    logger.info(f"Update took {end - start} seconds.")
-    await asyncio.sleep(10)
-    return ret
+    return svc.update_preserve(image=pull.id)
 
 
 def main():
+    from monkey_patch import setup
+    setup()
     address = os.environ['ORCHESTRATOR_ADDRESS']
 
     logger.info(f"Address: {address}")
