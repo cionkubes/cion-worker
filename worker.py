@@ -1,22 +1,22 @@
 import asyncio
 import os
-from concurrent.futures import thread
 
 import docker
-from logzero import logger
+from logzero import logger, loglevel
+loglevel(int(os.environ.get("LOGLEVEL", 10)))
 
 from cion_interface.service import service
 from workq.worker import Orchestrator
 
-# CERTS = os.path.join(os.path.expanduser('~'), '.docker', 'machine', 'machines', 'manager')
-# tls_config = docker.tls.TLSConfig(
-#     client_cert=(os.path.join(CERTS, 'cert.pem'), os.path.join(CERTS, 'key.pem')),
-#     ca_cert=os.path.join(CERTS, 'ca.pem'),
-#     verify=True
-# )
+CERTS = os.path.join(os.path.expanduser('~'), '.docker', 'machine', 'machines', 'manager')
+tls_config = docker.tls.TLSConfig(
+    client_cert=(os.path.join(CERTS, 'cert.pem'), os.path.join(CERTS, 'key.pem')),
+    ca_cert=os.path.join(CERTS, 'ca.pem'),
+    verify=True
+)
 
-# client = docker.DockerClient(base_url='tcp://192.168.99.100:2376', tls=tls_config)
-client = docker.from_env()
+client = docker.DockerClient(base_url='tcp://192.168.99.100:2376', tls=tls_config)
+# client = docker.from_env()
 client.login(username='haraldfw', password='6Ci!*5Xai!sWRNA')
 
 
