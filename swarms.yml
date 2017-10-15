@@ -1,0 +1,9 @@
+test:
+  mode: tls
+  url: tcp://192.168.56.20:2376
+  cert: cert.pem
+  key: key.pem
+  ca: ca.pem
+
+#local:
+#  mode: from_env
