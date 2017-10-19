@@ -1,4 +1,22 @@
+import functools
+
 import docker
+import os.path
+import posixpath as ppath
+
+
+def rec_split(path):
+    rest, tail = ppath.split(path)
+    if rest in ('', ppath.sep):
+        return tail,
+
+    return rec_split(rest) + (tail,)
+
+
+def unix_to_native(path):
+    parts = rec_split(path)
+
+    return os.path.expanduser(functools.reduce(os.path.join, parts))
 
 
 def convert(name, swarm):
@@ -16,9 +34,12 @@ def convert(name, swarm):
 def convert_tls(name, swarm, **params):
     url = swarm['url']
 
-    cert = swarm['cert']
-    key = swarm['key']
-    ca = swarm['ca']
+    cert = unix_to_native(swarm['cert'])
+    key = unix_to_native(swarm['key'])
+    ca = unix_to_native(swarm['ca'])
+
+    for file in [cert, key, ca]:
+        assert os.path.isfile(file), f"File {os.path.abspath(file)} does not exist!"
 
     tls_config = docker.tls.TLSConfig(
         client_cert=(cert, key),
