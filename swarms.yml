@@ -1,9 +1,36 @@
-test:
-  mode: tls
-  url: tcp://192.168.99.100:2376
-  cert: ~/.docker/machine/machines/manager/cert.pem
-  key: ~/.docker/machine/machines/manager/key.pem
-  ca: ~/.docker/machine/machines/manager/ca.pem
+# glob: ".*\/(.*):(.*)"
+glob: "tiptk/tipimages:(.*)_(.*)"
 
-#local:
-#  mode: from_env
+envs:
+#  prod:
+#    mode: tls
+#    url: tcp://10.68.4.58:2376
+#    cert: ~/../../dev/deploy/secrets/decrypted/tls/prod/cert.pem
+#    key: ~/../../dev/deploy/secrets/decrypted/tls/prod/key.pem
+#    ca: ~/../../dev/deploy/secrets/decrypted/tls/ca.pem
+#    sign: true
+  qa:
+    mode: tls
+    url: tcp://10.68.4.60:2376
+    cert: ~/../../dev/deploy/secrets/decrypted/tls/qa/cert.pem
+    key: ~/../../dev/deploy/secrets/decrypted/tls/qa/key.pem
+    ca: ~/../../dev/deploy/secrets/decrypted/tls/ca.pem
+    sign: false
+    tag-match: "\d+\.\d+\.\d+"
+#  test:
+#    mode: tls
+#    url: tcp://104.155.29.167:2376
+#    cert: ~/../../dev/deploy/secrets/decrypted/tls/test/cert.pem
+#    key: ~/../../dev/deploy/secrets/decrypted/tls/test/key.pem
+#    ca: ~/../../dev/deploy/secrets/decrypted/tls/ca.pem
+#    sign: false
+#    tag-match: ".*"
+
+images:
+  rest:
+    services:
+      - test_rest
+      - tkpw_rest
+  bluegarden-get:
+    services:
+      - bg_get
