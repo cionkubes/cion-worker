@@ -45,15 +45,8 @@ class Config:
         self.documents = self.connection.observe('documents')
 
         async def get_current(name):
-            q = self.connection.db().table('documents').get_all(name, index='name')
-
-            result = None
-            async for elem in self.connection.run_iter(q):
-                assert result is None, "Name in documents table must be unique."
-                result = elem
-
-            assert result is not None, f"No '{name}' config exists in database."
-            return result
+            q = self.connection.db().table('documents').get(name)
+            return await self.connection.run(q)
 
         def map_cfg(cfg, x):
             try:

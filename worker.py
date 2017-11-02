@@ -43,16 +43,21 @@ async def distribute_to(image):
             logger.debug(f"Common services: {common}")
             ret.extend((sname, service) for service in common)
 
+    if not len(ret):
+        logger.warn(f"No targets found for image {image}")
+
     return ret
 
 
 @service.update.implement
 async def update(swarm, svc_name, image: str):
+    client = cfg.swarms()[swarm].client
+
     logger.info(f"Updating image {image} in service {svc_name} on swarm {swarm}.")
     repo, tag = image.split(':')
-    pull = cfg.swarms().test.client.images.pull(repo, tag=tag)
+    pull = client.images.pull(repo, tag=tag)
     logger.debug(f'Image pulled: {pull.id}')
-    svc = cfg.swarms()[swarm].client.services.get(svc_name)
+    svc = client.services.get(svc_name)
     return svc.update_preserve(image=pull.id)
 
 

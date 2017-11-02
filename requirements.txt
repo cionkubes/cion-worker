@@ -4,3 +4,4 @@ async_rethink
 PyYAML==3.12
 logzero==1.3.1
 docker==2.5.1
+Rx==1.6.0
