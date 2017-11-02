@@ -76,11 +76,16 @@ def main():
 
     global cfg
     cfg = loop.run_until_complete(config())
-    cfg.on_new('swarms', lambda swarms: swarms.login(username='haraldfw', password='6Ci!*5Xai!sWRNA'))
+    cfg.on_new('swarms', login)
 
     loop.run_until_complete(orchestrator.join(service))
     cfg.teardown()
     loop.close()
+
+    
+def login(swarms):
+    logger.info("Logged in to swarms.")
+    swarms.login(username='haraldfw', password='6Ci!*5Xai!sWRNA')
 
 
 if __name__ == '__main__':
