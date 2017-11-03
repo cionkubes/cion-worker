@@ -20,7 +20,6 @@ async def distribute_to(image):
         return []
 
     repo, tag = match.group(1), match.group(2)
-    repo = repo.replace('-', '_')
     try:
         img = cfg.images().images[repo]
     except KeyError:
@@ -38,9 +37,7 @@ async def distribute_to(image):
 
         if swarm.should_push(tag):
             ssvc = swarm.client.services.list()
-            logger.debug(f"Swarm services: {ssvc}")
             common = (svc.name for svc in ssvc if svc.name in img.services)
-            logger.debug(f"Common services: {common}")
             ret.extend((sname, service) for service in common)
 
     if not len(ret):
