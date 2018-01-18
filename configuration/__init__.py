@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from async_rethink import Connection
 import configuration.swarm
-import configuration.image
+import configuration.service
 from logzero import logger
 
 
@@ -35,7 +35,7 @@ class Config:
 
         self.configs = [
             swarm,
-            image,
+            service,
             Glob
         ]
 
@@ -96,8 +96,8 @@ class Config:
     def swarms(self) -> configuration.swarm.Swarms:
         return self.latest_config[swarm.name]
 
-    def images(self) -> configuration.image.Images:
-        return self.latest_config[image.name]
+    def services(self) -> configuration.service.Services:
+        return self.latest_config[service.name]
 
     def glob(self):
         return self.latest_config[Glob.name]

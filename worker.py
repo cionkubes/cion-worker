@@ -20,16 +20,13 @@ async def distribute_to(image):
         return []
 
     repo, tag = match.group(1), match.group(2)
-    try:
-        img = cfg.images().images[repo]
-    except KeyError:
-        logger.info(f"Image {repo} not configured.")
-        return []
+
+    services = cfg.services().using_image(repo)
 
     ret = []
 
     logger.debug(f"Image: {repo}, tag: {tag}")
-    logger.debug(f"Image services: {img.services}")
+    logger.debug(f"Image services: {services}")
 
     for sname, swarm in cfg.swarms().swarms.items():
         logger.debug(f"Swarm: {sname}")
@@ -37,7 +34,7 @@ async def distribute_to(image):
 
         if swarm.should_push(tag):
             ssvc = swarm.client.services.list()
-            common = (svc.name for svc in ssvc if svc.name in img.services)
+            common = (svc.name for svc in ssvc if svc.name in services)
             ret.extend((sname, service) for service in common)
 
     if not len(ret):
@@ -50,9 +47,9 @@ async def distribute_to(image):
 async def update(swarm, svc_name, image: str):
     client = cfg.swarms()[swarm].client
 
-    logger.info(f"Updating image {image} in service {svc_name} on swarm {swarm}.")
+    logger.info(f"Updating image {image} in service.py {svc_name} on swarm {swarm}.")
     repo, tag = image.split(':')
-    pull = client.images.pull(repo, tag=tag)
+    pull = client.services.pull(repo, tag=tag)
     logger.debug(f'Image pulled: {pull.id}')
     svc = client.services.get(svc_name)
     return svc.update_preserve(image=pull.id)
