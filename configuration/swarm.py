@@ -26,11 +26,11 @@ def convert(name, swarm):
 
 
 def convert_tls(name, swarm, **params):
-    url = swarm['url']
+    url = swarm['tls']['url']
 
-    cert = swarm['cert']
-    key = swarm['key']
-    ca = swarm['ca']
+    cert = swarm['tls']['cert']
+    key = swarm['tls']['key']
+    ca = swarm['tls']['ca']
 
     for file in [cert, key, ca]:
         assert os.path.isfile(file), f"File {os.path.abspath(file)} does not exist!"

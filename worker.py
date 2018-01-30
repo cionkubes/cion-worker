@@ -1,8 +1,8 @@
 import asyncio
 import os
 
-from logzero import logger, loglevel
 from cion_interface.service import service
+from logzero import logger, loglevel
 
 from configuration import config, Config
 
