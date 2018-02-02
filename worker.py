@@ -35,7 +35,7 @@ async def distribute_to(image):
         if swarm.should_push(tag):
             ssvc = swarm.client.services.list()
             common = (svc.name for svc in ssvc if svc.name in services)
-            ret.extend((sname, service) for service in common)
+            ret.extend((sname, service, image) for service in common)
 
     if not len(ret):
         logger.warn(f"No targets found for image {image}")
@@ -49,10 +49,10 @@ async def update(swarm, svc_name, image: str):
 
     logger.info(f"Updating image {image} in service.py {svc_name} on swarm {swarm}.")
     repo, tag = image.split(':')
-    pull = client.services.pull(repo, tag=tag)
+    pull = client.images.pull(repo, tag=tag)
     logger.debug(f'Image pulled: {pull.id}')
     svc = client.services.get(svc_name)
-    return svc.update_preserve(image=pull.id)
+    svc.update_preserve(image=pull.id)
 
 
 def main():

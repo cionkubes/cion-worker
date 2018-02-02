@@ -22,7 +22,7 @@ def convert(name, swarm):
     params = swarm.get('parameters', {})
 
     convert_fn = modes[mode]
-    return Swarm(convert_fn(name, swarm, **params), swarm)
+    return Swarm(name, convert_fn(name, swarm, **params), swarm)
 
 
 def convert_tls(name, swarm, **params):
@@ -69,7 +69,8 @@ class Swarms:
 
 
 class Swarm:
-    def __init__(self, client, swarm):
+    def __init__(self, name, client, swarm):
+        self.name = name
         self.client = client
         self.sign = bool(swarm.get('sign', False))
         self.has_tag_match = 'tag-match' in swarm
