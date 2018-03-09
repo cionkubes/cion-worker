@@ -4,7 +4,7 @@ import os
 from cion_interface.service import service
 from logzero import logger, loglevel
 
-from configuration import config
+from configuration import config, Config
 
 loglevel(int(os.environ.get("LOGLEVEL", 10)))
 
