@@ -4,7 +4,7 @@ import os
 from cion_interface.service import service
 from logzero import logger, loglevel
 
-from configuration import config, Config
+from configuration import config
 
 loglevel(int(os.environ.get("LOGLEVEL", 10)))
 
@@ -13,19 +13,20 @@ cfg: Config = None
 
 @service.distribute_to.implement
 async def distribute_to(image):
-    match = cfg.glob().fullmatch(image)
+    re = cfg.repos().repo(image).glob
+    match = re.fullmatch(image)
 
     if not match:
-        logger.info(f"New image '{image}' did not match pattern {cfg.glob()}.")
+        logger.info(f"New image '{image}' did not match pattern {re}.")
         return []
 
-    repo, tag = match.group(1), match.group(2)
+    user, repo, tag = match.group(1), match.group(2), match.group(3)
 
-    services = cfg.services().using_image(repo)
+    services = cfg.services().using_image(f"{user}/{repo}")
 
     ret = []
 
-    logger.debug(f"Image: {repo}, tag: {tag}")
+    logger.debug(f"Image: {image}")
     logger.debug(f"Image services: {services}")
 
     for sname, swarm in cfg.swarms().swarms.items():
@@ -48,10 +49,14 @@ async def distribute_to(image):
 
 @service.update.implement
 async def update(swarm, svc_name, image: str):
+    repo_cfg = cfg.repos().repo(image)
     client = cfg.swarms()[swarm].client
 
+    if repo_cfg.require_login():
+        repo_cfg.login_to(client)
+
     logger.info(
-        f"Updating image {image} in service.py {svc_name} on swarm {swarm}.")
+        f"Updating image {image} in service {svc_name} on swarm {swarm}.")
     repo, tag = image.split(':')
     pull = client.images.pull(repo, tag=tag)
     logger.debug(f'Image pulled: {pull.id}')
@@ -73,9 +78,7 @@ def main():
     loop = asyncio.get_event_loop()
 
     global cfg
-    cfg = Config()
-    cfg.on_new('swarms', login)
-    loop.run_until_complete(cfg.init())
+    cfg = loop.run_until_complete(config())
 
     worker = loop.run_until_complete(orchestrator.join(service))
     hc = setup_healthcheck(worker)
@@ -100,11 +103,6 @@ def main():
         cfg.teardown()
 
     loop.close()
-
-
-def login(swarms):
-    logger.info("Logged in to swarms.")
-    swarms.login(username='haraldfw', password='6Ci!*5Xai!sWRNA')
 
 
 def setup_healthcheck(worker):

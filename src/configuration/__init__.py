@@ -1,19 +1,12 @@
 import os
-import re
 from collections import defaultdict
 
 from async_rethink import Connection
 import configuration.swarm
 import configuration.service
+import configuration.repo
+
 from logzero import logger
-
-
-class Glob:
-    name = 'glob'
-
-    @staticmethod
-    def map(x):
-        return re.compile(x)
 
 
 async def config():
@@ -36,7 +29,7 @@ class Config:
         self.configs = [
             swarm,
             service,
-            Glob
+            repo
         ]
 
     async def init(self):
@@ -89,7 +82,6 @@ class Config:
                     cb(new)
             except:
                 logger.exception("Exception in config update.")
-                raise
 
         return update
 
@@ -99,5 +91,5 @@ class Config:
     def services(self) -> configuration.service.Services:
         return self.latest_config[service.name]
 
-    def glob(self):
-        return self.latest_config[Glob.name]
+    def repos(self):
+        return self.latest_config[repo.name]
