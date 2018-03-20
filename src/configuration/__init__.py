@@ -80,6 +80,8 @@ class Config:
 
                 for cb in self.callbacks[name]:
                     cb(new)
+
+                logger.info(f"Succesfully updated {name} config with {new}")
             except:
                 logger.exception("Exception in config update.")
 

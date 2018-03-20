@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import socket
 import os
 
 from cion_interface.service import service
@@ -21,21 +23,24 @@ async def distribute_to(image):
         return []
 
     user, repo, tag = match.group(1), match.group(2), match.group(3)
+    translated_img = f"{user}/{repo}"
+    logger.debug(f"Image: {image} -> {translated_img}")
 
+    logger.debug(f"Services: {cfg.services().services}")
     services = cfg.services().using_image(f"{user}/{repo}")
+    logger.debug(f"Services using image {translated_img}: {services}")
 
     ret = []
-
-    logger.debug(f"Image: {image}")
-    logger.debug(f"Image services: {services}")
 
     for sname, swarm in cfg.swarms().swarms.items():
         logger.debug(f"Swarm: {sname}")
         logger.debug(f"Tag match: {swarm.tag_match}")
 
         if swarm.should_push(tag):
-            logger.info(f"Swarm {sname} accepted ")
+            logger.debug(f"Swarm {sname} accepted ")
             ssvc = swarm.client.services.list()
+            logger.debug(
+                f"Swarm {sname} services: {[svc.name for svc in ssvc]}")
             common = (svc.name for svc in ssvc if svc.name in services)
             ret.extend((sname, service, image) for service in common)
 
@@ -64,7 +69,7 @@ async def update(swarm, svc_name, image: str):
     svc.update_preserve(image=pull.id)
 
 
-def main():
+async def main():
     from workq.worker import Orchestrator
     from monkey_patch import setup
     setup()
@@ -75,31 +80,29 @@ def main():
     addr, port = address.split(':')
     orchestrator = Orchestrator(addr, port)
 
-    loop = asyncio.get_event_loop()
-
     global cfg
-    cfg = loop.run_until_complete(config())
+    cfg = await config()
 
-    worker = loop.run_until_complete(orchestrator.join(service))
+    worker = await orchestrator.join(service)
+
     hc = setup_healthcheck(worker)
-
     handler = hc.make_handler()
-    create_hc_srv = loop.create_server(handler, '0.0.0.0', 5000)
-    srv = loop.run_until_complete(create_hc_srv)
+
+    srv = await loop.create_server(handler, '0.0.0.0', 5000)
     addr, port = srv.sockets[0].getsockname()
 
     logger.info(f'Healthcheck endpoint started on http://{addr}:{port}')
 
     try:
-        loop.run_until_complete(worker.run_until_complete())
+        await worker.run_until_complete()
     except KeyboardInterrupt:
         pass
     finally:
         srv.close()
-        loop.run_until_complete(hc.shutdown())
-        loop.run_until_complete(handler.shutdown(60.0))
-        loop.run_until_complete(handler.finish_connections(1.0))
-        loop.run_until_complete(hc.cleanup())
+        await hc.shutdown()
+        await handler.shutdown(60.0)
+        await handler.finish_connections(1.0)
+        await hc.cleanup()
         cfg.teardown()
 
     loop.close()
@@ -121,4 +124,6 @@ def setup_healthcheck(worker):
 
 
 if __name__ == '__main__':
-    main()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+    loop.close()
