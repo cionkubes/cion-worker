@@ -71,7 +71,7 @@ async def update(swarm, svc_name, image: str):
     svc.update_preserve(image=pull.id)
 
 
-async def main():
+async def main(loop):
     from workq.worker import Orchestrator
     from monkey_patch import setup
     setup()
@@ -115,8 +115,6 @@ async def main():
         await hc.cleanup()
         cfg.teardown()
 
-    loop.close()
-
 
 def setup_healthcheck(worker):
     from aiohttp import web
@@ -135,5 +133,5 @@ def setup_healthcheck(worker):
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    loop.run_until_complete(main(loop))
     loop.close()
