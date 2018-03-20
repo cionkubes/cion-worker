@@ -5,4 +5,4 @@ docker==2.5.1
 Rx==1.6.0
 -e git+https://github.com/cionkubes/workq@v1.0.4#egg=workq
 -e git+https://github.com/cionkubes/cion-interface#egg=cion-interface
--e git+https://github.com/cionkubes/rethink-wrapper@v0.2.2#egg=async-rethink
+-e git+https://github.com/cionkubes/rethink-wrapper@v0.2.3#egg=async-rethink

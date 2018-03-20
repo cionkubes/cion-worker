@@ -3,6 +3,8 @@ import logging
 import socket
 import os
 
+from async_rethink import connection
+
 from cion_interface.service import service
 from logzero import logger, loglevel
 
@@ -76,6 +78,9 @@ async def main():
 
     address = os.environ['ORCHESTRATOR_ADDRESS']
 
+    db_host = os.environ.get('DATABASE_HOST')
+    db_port = os.environ.get('DATABASE_PORT')
+
     logger.info(f"Address: {address}")
     addr, port = address.split(':')
     orchestrator = Orchestrator(addr, port)
@@ -91,7 +96,12 @@ async def main():
     srv = await loop.create_server(handler, '0.0.0.0', 5000)
     addr, port = srv.sockets[0].getsockname()
 
-    logger.info(f'Healthcheck endpoint started on http://{addr}:{port}')
+    logger.debug(f'Healthcheck endpoint started on http://{addr}:{port}')
+
+    db = await connection(db_host, db_port)
+    log_handler = db.get_log_handler(f"worker-{worker.own_ip()}")
+    log_handler.setLevel(logging.INFO)
+    logger.addHandler(log_handler)
 
     try:
         await worker.run_until_complete()
