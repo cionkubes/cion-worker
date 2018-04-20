@@ -1,4 +1,9 @@
 import functools
+import urllib
+import kube
+
+from kube import _base
+from kube import APIServerProxy
 import docker
 import warnings
 
@@ -92,8 +97,69 @@ def update_preserve(self, **kwargs):
         **create_kwargs
     )
 
+@functools.wraps(kube.Cluster.__init__)
+def cluster_init(self, url='http://localhost:8001/', proxy=None):
+    if not url.endswith('/'):
+        url += '/'
+    self.api_base_url = url
+
+    if proxy is not None:
+        self.proxy = proxy
+    else:
+        self.proxy = APIServer(url)
+
+    self.daemonsets = self.kindimpl(_base.Kind.DaemonSetList)(self)
+    self.deployments = self.kindimpl(_base.Kind.DeploymentList)(self)
+    self.nodes = self.kindimpl(_base.Kind.NodeList)(self)
+    self.namespaces = self.kindimpl(_base.Kind.NamespaceList)(self)
+    self.replicasets = self.kindimpl(_base.Kind.ReplicaSetList)(self)
+    self.replicationcontrollers = self.kindimpl(
+        _base.Kind.ReplicationControllerList)(self)
+    self.pods = self.kindimpl(_base.Kind.PodList)(self)
+    self.services = self.kindimpl(_base.Kind.ServiceList)(self)
+    self.secrets = self.kindimpl(_base.Kind.SecretList)(self)
+
+
+def find_api_path(self, api_path_options, resource):
+    """Find the most recent available Kubernetes API version base path.
+
+    :param api_path_options: List of existing Kubernetes API version base path
+        string options in reverse order of their version.
+    :type api_path_options: List
+    :param str resource: The name of the k8s resource.
+
+    :returns: The most recent available Kubernetes API version base path.
+    """
+
+    for path_option in api_path_options:
+        url = urllib.parse.urljoin(self.base_url, '/'.join([path_option, resource]))
+
+        response = self._session.get(url)
+        if response.status_code == 200:
+            return path_option
+
+    raise kube.KubeError(
+        'Failed to reach API for base path {} and API version'
+        ' base path options list {}'.format(self.base_url, api_path_options))
+
+
+@property
+def api_path(self):
+    """The most recent accessible k8s API base path string.
+
+    For example, 'api/v1'.
+    """
+    if not self._api_path:
+        self._api_path = self._cluster.proxy.find_api_path(self.api_paths, self.resource)
+
+    return self._api_path
+
 
 def setup():
     docker.APIClient.update_service_preserve = update_service_preserve
 
     services.Service.update_preserve = update_preserve
+
+    kube.Cluster.__init__ = cluster_init
+    kube.APIServerProxy.find_api_path = find_api_path
+    kube._base.BaseView.api_path = api_path

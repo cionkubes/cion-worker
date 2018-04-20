@@ -2,7 +2,7 @@ import os
 from collections import defaultdict
 
 from async_rethink import Connection
-import configuration.swarm
+import configuration.environment
 import configuration.service
 import configuration.repo
 
@@ -27,7 +27,7 @@ class Config:
         self.callbacks = defaultdict(lambda: [])
 
         self.configs = [
-            swarm,
+            environment,
             service,
             repo
         ]
@@ -81,14 +81,14 @@ class Config:
                 for cb in self.callbacks[name]:
                     cb(new)
 
-                logger.info(f"Succesfully updated {name} config with {new}")
+                logger.info(f"Successfully updated {name} config with {new}")
             except:
                 logger.exception("Exception in config update.")
 
         return update
 
-    def swarms(self) -> configuration.swarm.Swarms:
-        return self.latest_config[swarm.name]
+    def environments(self) -> configuration.environment.Environments:
+        return self.latest_config[environment.name]
 
     def services(self) -> configuration.service.Services:
         return self.latest_config[service.name]

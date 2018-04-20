@@ -4,7 +4,7 @@ WORKDIR /opt/worker
 
 HEALTHCHECK --timeout=5s --retries=3 --start-period=30s CMD python healthcheck.py http://localhost:5000
 
-RUN apk --no-cache add git
+RUN apk --no-cache add git build-base
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt --src /lib

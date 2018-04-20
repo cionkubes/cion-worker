@@ -34,17 +34,13 @@ async def distribute_to(image):
 
     ret = []
 
-    for sname, swarm in cfg.swarms().swarms.items():
-        logger.debug(f"Swarm: {sname}")
-        logger.debug(f"Tag match: {swarm.tag_match}")
+    for name, env in cfg.environments().items():
+        logger.debug(f"Swarm: {name}")
+        logger.debug(f"Tag match: {env.tag_match}")
 
-        if swarm.should_push(tag):
-            logger.debug(f"Swarm {sname} accepted ")
-            ssvc = swarm.client.services.list()
-            logger.debug(
-                f"Swarm {sname} services: {[svc.name for svc in ssvc]}")
-            common = (svc.name for svc in ssvc if svc.name in services)
-            ret.extend((sname, service, image) for service in common)
+        if env.should_push(tag):
+            logger.debug(f"Swarm {name} accepted ")
+            ret.extend((name, service, image) for service in env.services() if service in services)
 
     if not len(ret):
         logger.warn(f"No targets found for image {image}")
@@ -57,18 +53,15 @@ async def distribute_to(image):
 @service.update.implement
 async def update(swarm, svc_name, image: str):
     repo_cfg = cfg.repos().repo(image)
-    client = cfg.swarms()[swarm].client
+    environment = cfg.environments()[swarm]
 
     if repo_cfg.require_login():
-        repo_cfg.login_to(client)
-
+        repo_cfg.login_to(environment)
+    
     logger.info(
         f"Updating image {image} in service {svc_name} on swarm {swarm}.")
-    repo, tag = image.split(':')
-    pull = client.images.pull(repo, tag=tag)
-    logger.debug(f'Image pulled: {pull.id}')
-    svc = client.services.get(svc_name)
-    svc.update_preserve(image=pull.id)
+
+    environment.update(svc_name, image)
 
 
 async def main(loop):
