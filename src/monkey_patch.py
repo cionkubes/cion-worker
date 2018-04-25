@@ -106,7 +106,7 @@ def cluster_init(self, url='http://localhost:8001/', proxy=None):
     if proxy is not None:
         self.proxy = proxy
     else:
-        self.proxy = APIServer(url)
+        self.proxy = APIServerProxy(url)
 
     self.daemonsets = self.kindimpl(_base.Kind.DaemonSetList)(self)
     self.deployments = self.kindimpl(_base.Kind.DeploymentList)(self)

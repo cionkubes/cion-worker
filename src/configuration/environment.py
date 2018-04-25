@@ -58,7 +58,9 @@ def convert_sa(name, environment, **params):
     url = environment['tls']['url']
 
     ca = environment['tls']['ca']
-    token = environment['tls']['token']
+    with open(environment['tls']['token']) as f:
+        token = f.read()
+
     jwt = base64.b64decode(token).decode()
 
     proxy = APISAServer(url, token=jwt, cafile=ca)

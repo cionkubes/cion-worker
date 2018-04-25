@@ -34,13 +34,13 @@ async def distribute_to(image):
 
     ret = []
 
-    for name, env in cfg.environments().items():
-        logger.debug(f"Swarm: {name}")
-        logger.debug(f"Tag match: {env.tag_match}")
+    for svc_name, service in services.items():
+        for env_name in service.environments:
+            environment = cfg.environments()[env_name]
 
-        if env.should_push(tag):
-            logger.debug(f"Swarm {name} accepted ")
-            ret.extend((name, service, image) for service in env.services() if service in services)
+            if environment.should_push(tag):
+                logger.debug(f"Environment {env_name} accepted image {image} with tag {tag}")
+                ret.append((env_name, svc_name, image))
 
     if not len(ret):
         logger.warn(f"No targets found for image {image}")
@@ -51,15 +51,15 @@ async def distribute_to(image):
 
 
 @service.update.implement
-async def update(swarm, svc_name, image: str):
+async def update(env, svc_name, image: str):
     repo_cfg = cfg.repos().repo(image)
-    environment = cfg.environments()[swarm]
+    environment = cfg.environments()[env]
 
     if repo_cfg.require_login():
         repo_cfg.login_to(environment)
     
     logger.info(
-        f"Updating image {image} in service {svc_name} on swarm {swarm}.")
+        f"Updating image {image} for service {svc_name} in environment {env}.")
 
     environment.update(svc_name, image)
 
