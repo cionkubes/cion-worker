@@ -10,12 +10,28 @@ from logzero import logger
 from kubernetes import APISAServer
 from abc import ABCMeta, abstractmethod
 
+from configuration.abc import ConfigABC
+
+class Environments(ConfigABC):
+    def __init__(self):
+        super().__init__()
+        self.environments = {}
+
+    def set(self, environment):
+        self.environments[environment['name']] = convert(environment["name"], environment)
+
+    def delete(self, environment):
+        self.environments.pop(environment['name'], None)
+
+    def __getitem__(self, item):
+        return self.environments[item]
+
+    def items(self):
+        return self.environments.items()
+
 
 name = 'swarms'
-
-
-def map(environments):
-    return Environments({name: convert(name, env) for name, env in environments.items()})
+init = Environments
 
 
 def convert(name, environment):
@@ -73,17 +89,6 @@ modes = {
     'from_env': convert_env,
     'k8s_serviceaccount': convert_sa
 }
-
-
-class Environments:
-    def __init__(self, environments: dict):
-        self.environments = environments
-
-    def __getitem__(self, item):
-        return self.environments[item]
-
-    def items(self):
-        return self.environments.items()
 
 
 class Environment(metaclass=ABCMeta):

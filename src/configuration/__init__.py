@@ -1,10 +1,14 @@
 import os
 from collections import defaultdict
+from operator import itemgetter
 
 from async_rethink import Connection
-import configuration.environment
-import configuration.service
-import configuration.repo
+from aioreactive.operators import from_iterable, concat
+from aioreactive.core import AsyncAnonymousObserver, subscribe, Operators
+
+import configuration.environment as environment
+import configuration.service as service
+import configuration.repo as repo
 
 from logzero import logger
 
@@ -21,77 +25,57 @@ class Config:
         self.port = os.environ.get('DATABASE_PORT')
 
         self.connection = Connection(self.addr, self.port)
-        self.subscriptions = []
-        self.documents = None
-        self.latest_config = {}
-        self.callbacks = defaultdict(lambda: [])
-
-        self.configs = [
+        self.latest_config = keydefaultdict(lambda name: self.configs[name].init())
+        
+        self.configs = {cfg.name: cfg for cfg in [
             environment,
             service,
             repo
-        ]
+        ]}
 
     async def init(self):
         await self.connection.connect()
+        unpack = itemgetter("config", "old_val", "new_val")
 
-        self.documents = self.connection.observe('documents')
+        async def update(x):
+            cfg, old, new = unpack(x)
 
-        async def get_current(name):
-            q = self.connection.db().table('documents').get(name)
-            return await self.connection.run(q)
-
-        def map_cfg(cfg, x):
             try:
-                return cfg.map(x)
+                if new is None:
+                    self.latest_config[cfg].delete(old)
+                else:
+                    self.latest_config[cfg].set(new)
             except:
-                logger.exception("Got exception while updating config.")
-                return None
+                logger.exception(f"Unhandled error while updating config {cfg}.")
+            else:
+                logger.info(f"Updated config {cfg} with {x}")
 
-        async def subscribe(cfg):
-            subscription = self.documents\
-                .map(lambda c: c['new_val'])\
-                .filter(lambda new: new['name'] == cfg.name)\
-                .start_with(await get_current(cfg.name))\
-                .map(lambda new: map_cfg(cfg, new['document']))\
-                .filter(lambda x: x is not None)\
-                .subscribe(
-                    self._update_config(cfg.name),
-                    logger.warn,
-                    lambda: self.subscriptions.remove(subscription)
-                )
+        return await subscribe(
+            from_iterable(self.configs.values())
+                | Operators.flat_map(self.config_observable),
+            AsyncAnonymousObserver(update))
 
-            return subscription
+    async def config_observable(self, cfg):
+        return concat(
+            self.connection.observable_query(self.connection.db().table(cfg.name))
+                | Operators.map(lambda elem: {"old_val": None, "new_val": elem}),
+            self.connection.observe(cfg.name)
+        ) | Operators.map(lambda elem: {**elem, "config": cfg.name})
 
-        for cfg in self.configs:
-            self.subscriptions.append(await subscribe(cfg))
-
-    def on_new(self, name, callback):
-        self.callbacks[name].append(callback)
-
-    def teardown(self):
-        for sub in self.subscriptions:
-            sub.dispose()
-
-    def _update_config(self, name):
-        def update(new):
-            try:
-                self.latest_config[name] = new
-
-                for cb in self.callbacks[name]:
-                    cb(new)
-
-                logger.info(f"Successfully updated {name} config with {new}")
-            except:
-                logger.exception("Exception in config update.")
-
-        return update
-
-    def environments(self) -> configuration.environment.Environments:
+    def environments(self) -> environment.Environments:
         return self.latest_config[environment.name]
 
-    def services(self) -> configuration.service.Services:
+    def services(self) -> service.Services:
         return self.latest_config[service.name]
 
-    def repos(self):
+    def repos(self) -> repo.Repos:
         return self.latest_config[repo.name]
+
+
+class keydefaultdict(defaultdict):
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        else:
+            ret = self[key] = self.default_factory(key)
+            return ret
