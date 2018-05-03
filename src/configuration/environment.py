@@ -30,7 +30,7 @@ class Environments(ConfigABC):
         return self.environments.items()
 
 
-name = 'swarms'
+name = 'environments'
 init = Environments
 
 
