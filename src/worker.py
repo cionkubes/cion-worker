@@ -1,12 +1,16 @@
 import asyncio
 import logging
 import socket
+import re
 import os
 
 from async_rethink import connection
-
+from async_rethink.reactive import parallel
 from cion_interface.service import service
+
 from logzero import logger, loglevel
+from aiohttp import web
+import aiohttp
 
 from configuration import config, Config
 
@@ -63,6 +67,40 @@ async def update(env, svc_name, image: str):
 
     environment.update(svc_name, image)
 
+@service.webhook.implement
+async def webhook(hooks, data):
+    async with aiohttp.ClientSession() as session:
+        await parallel(handle_webhook(session, hook, data) for hook in hooks if should_send(hook['on'], data))
+
+
+def should_send(on, data):
+    for key, value in on.items():
+        if isinstance(value, dict):
+            if not should_send(value, data[key]):
+                return False
+        else:
+            try:
+                e = re.compile(value)
+            except:
+                if value != data[key]:
+                    return False
+            else:
+                if not e.match(data[key]):
+                    return False
+
+    return True
+
+
+async def handle_webhook(session, hook, data):
+    params = {
+        "data": hook['body'].format(**data).encode(),
+        "headers": hook['headers']
+    }
+
+    async with session.post(hook['url'], **params) as response:
+        assert response.status == hook.get('expected-status', 200),\
+            f"Webhook responded with unexpected status {response.status}"
+
 
 async def main(loop):
     from workq.worker import Orchestrator
@@ -110,8 +148,6 @@ async def main(loop):
 
 
 def setup_healthcheck(worker):
-    from aiohttp import web
-
     async def endpoint(request):
         ping = await worker.ping()
         return web.json_response({

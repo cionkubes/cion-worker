@@ -3,7 +3,7 @@ from collections import defaultdict
 from operator import itemgetter
 
 from async_rethink import Connection
-from aioreactive.operators import from_iterable, concat
+from aioreactive.operators import from_iterable, merge
 from aioreactive.core import AsyncAnonymousObserver, subscribe, Operators
 
 import configuration.environment as environment
@@ -56,11 +56,8 @@ class Config:
             AsyncAnonymousObserver(update))
 
     async def config_observable(self, cfg):
-        return concat(
-            self.connection.observable_query(self.connection.db().table(cfg.name))
-                | Operators.map(lambda elem: {"old_val": None, "new_val": elem}),
-            self.connection.observe(cfg.name)
-        ) | Operators.map(lambda elem: {**elem, "config": cfg.name})
+        return self.connection.start_with_and_changes(self.connection.db().table(cfg.name))\
+            | Operators.map(lambda elem: {**elem, "config": cfg.name})\
 
     def environments(self) -> environment.Environments:
         return self.latest_config[environment.name]
