@@ -11,6 +11,7 @@ RUN pip install -r requirements.txt --src /lib
 
 COPY src/monkey_patch.py .
 COPY src/healthcheck.py .
+COPY src/kubernetes.py .
 COPY src/configuration configuration
 COPY src/worker.py .
 
