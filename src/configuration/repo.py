@@ -42,7 +42,7 @@ class Repos(ConfigABC):
         if "default_glob" in user:
             defaults["glob"] = user["default_glob"]
 
-        for repo in user["repos"]:
+        for repo in user.get("repos", []):
             self.repos[user["user"]][repo["repo"]] = Repo({**defaults, **repo})
 
     def delete(self, user):

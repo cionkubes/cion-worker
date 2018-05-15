@@ -131,7 +131,11 @@ class DockerSwarm(Environment):
         return (service.name for service in self.client.services.list())
 
     def update(self, svc_name, image):
-        repo, tag = image.split(':')
+        try:
+            repo, tag = image.split(':')
+        except ValueError:
+            repo = image
+            tag = "latest"
 
         pull = self.client.images.pull(repo, tag=tag)
         logger.debug(f'Image pulled: {pull.id}')
